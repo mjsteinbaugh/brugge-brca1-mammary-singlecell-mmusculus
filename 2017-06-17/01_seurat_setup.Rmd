@@ -1,0 +1,104 @@
+---
+title: "Seurat object setup and filtering"
+author: "Michael J. Steinbaugh"
+date: "`r Sys.Date()`"
+template_date: "2017-06-12"
+bibliography: bcbioSinglecell.bib
+---
+
+```{r setup, message=FALSE}
+source("setup.R")
+library(Matrix)
+library(Seurat)
+latent.vars <- c("nGene", "nUMI", "mito.ratio")
+min.genes <- 200
+mito.ratio <- 0.1
+num.pc <- 40
+project <- "brca1"
+```
+
+```{r header, child="header.Rmd"}
+```
+
+
+
+Read the 10X Genomics count data.
+
+```{r counts}
+counts <- read_10x("data-raw/10X_May2017")
+save_data(counts, compress = FALSE)
+```
+
+Set up the [Seurat][] object.
+
+```{r seurat_setup}
+seurat <- new("seurat", raw.data = counts) %>%
+    Setup(min.genes = min.genes, project = project)
+
+mito.genes <- grep("^MT-", rownames(seurat@data), ignore.case = TRUE, value = TRUE)
+meta.mito.ratio <- colSums(expm1(seurat@data[mito.genes, ])) / colSums(expm1(seurat@data))
+
+seurat <- AddMetaData(seurat, meta.mito.ratio, "mito.ratio")
+```
+
+```{r VlnPlot_prefilter}
+VlnPlot(seurat, "nGene")
+VlnPlot(seurat, "nUMI")
+VlnPlot(seurat, "mito.ratio")
+```
+
+Filter out cells with high mitochondrial transcript abundance and regress latent variables.
+
+```{r SubsetData}
+seurat <- SubsetData(seurat, subset.name = "mito.ratio", accept.high = mito.ratio)
+```
+
+```{r RegressOut}
+seurat <- RegressOut(seurat, latent.vars = latent.vars)
+```
+
+```{r MeanVarPlot}
+seurat <- MeanVarPlot(seurat)
+```
+
+```{r PCA}
+seurat <- PCA(seurat)
+```
+
+```{r ProjectPCA}
+seurat <- ProjectPCA(seurat)
+```
+
+```{r save_seurat}
+save_data(seurat, compress = FALSE)
+```
+
+
+
+# Plots
+
+```{r VlnPlot}
+VlnPlot(seurat, "nGene")
+VlnPlot(seurat, "nUMI")
+VlnPlot(seurat, "mito.ratio")
+```
+
+```{r VizPCA}
+VizPCA(seurat, pcs.use = 1:4)
+```
+
+```{r PCHeatmap}
+PCHeatmap(seurat, cells.use = 100, do.balanced = TRUE, label.columns = FALSE)
+PCHeatmap(seurat, cells.use = 500, do.balanced = TRUE, pc.use = 1:12)
+```
+
+```{r PCElbowPlot}
+PCElbowPlot(seurat, num.pc = num.pc) +
+    ggtitle("pc elbow plot") +
+    geom_line()
+```
+
+
+
+```{r footer, child="footer.Rmd"}
+```

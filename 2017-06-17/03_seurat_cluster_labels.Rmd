@@ -1,0 +1,61 @@
+---
+title: "Seurat clustering identification"
+author: "Michael J. Steinbaugh"
+date: "`r Sys.Date()`"
+template_date: "2017-06-12"
+bibliography: bcbioSinglecell.bib
+---
+
+```{r setup, message=FALSE}
+source("setup.R")
+library(Seurat)
+data(seurat)
+pc.use <- 13
+```
+
+```{r header, child="header.Rmd"}
+```
+
+
+
+```{r FindClusters}
+seurat <- FindClusters(
+    seurat,
+    do.sparse = TRUE,
+    pc.use = 1:pc.use,
+    save.SNN = TRUE)
+```
+
+```{r RunTSNE}
+seurat <- RunTSNE(seurat, dims.use = 1:pc.use, do.fast = TRUE)
+save_data(seurat, compress = FALSE)
+```
+
+```{r TSNEPlot}
+TSNEPlot(seurat, do.label = TRUE)
+```
+
+```{r PCAPlot}
+PCAPlot(seurat)
+```
+
+```{r FindAllMarkers}
+markers <- FindAllMarkers(seurat, only.pos = TRUE)
+markers %>% group_by(cluster) %>% top_n(10, avg_diff) -> top10
+save_data(markers, top10)
+```
+
+```{r FeaturePlot}
+FeaturePlot(seurat, "nGene", cols.use = c("grey","green"))
+FeaturePlot(seurat, "mito.ratio", cols.use = c("grey","red"))
+```
+
+```{r DoHeatmap}
+DoHeatmap(seurat, genes.use = top10$gene, order.by.ident = TRUE,
+          slim.col.label = TRUE, remove.key = TRUE)
+```
+
+
+
+```{r footer, child="footer.Rmd"}
+```
