@@ -1,0 +1,64 @@
+---
+title: "T Cell Removal"
+author: "`r getOption('author')`"
+date: "`r Sys.Date()`"
+bibliography: bibliography.bib
+params:
+    seurat: "data/bcbFilteredSeurat.rda"
+---
+
+```{r setup, cache=FALSE, message=FALSE, warning=FALSE}
+library(Seurat)
+library(bcbioSingleCell)
+library(tidyverse)
+
+prepareSingleCellTemplate()
+source("setup.R")
+
+seuratName <- load(params$seurat)
+
+opts_chunk$set(cache = FALSE)
+```
+
+```{r header, child="_header.Rmd", eval=file.exists("_header.Rmd")}
+```
+
+
+
+```{r tsne}
+TSNEPlot(
+    get(seuratName),
+    do.label = TRUE,
+    label.size = 6)
+```
+
+Clusters 4, 13, and 14 are largely attributed to sample_6207 and sample_6308 (both Brca1 Het). This is related to a technical dissection issue, as mentioned by Carman. These are lymph-related cells, mostly T cells. Let's remove them from the dataset.
+
+```{r remove_tcell_contamination}
+seurat <- SubsetData(
+    get(seuratName),
+    ident.remove = c(4, 13, 14))
+assignAndSaveData(paste0(seuratName, "Subset"), seurat)
+```
+
+```{r}
+TSNEPlot(
+    seurat,
+    do.label = TRUE,
+    label.size = 6)
+TSNEPlot(
+    seurat,
+    do.label = TRUE,
+    group.by = "sampleName",
+    label.size = 6)
+TSNEPlot(
+    seurat,
+    do.label = TRUE,
+    group.by = "genotype",
+    label.size = 6)
+```
+
+
+
+```{r footer, child="_footer.Rmd", eval=file.exists("_footer.Rmd")}
+```

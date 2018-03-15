@@ -1,0 +1,133 @@
+---
+title: "Quality Control"
+author: "`r getOption('author')`"
+date: "`r Sys.Date()`"
+bibliography: bibliography.bib
+params:
+    bcbFile: "data/bcb.rda"
+    minUMIs: 1000
+    minGenes: 500
+    maxGenes: 8000
+    maxMitoRatio: 0.1
+    minNovelty: 0.8
+    minCellsPerGene: 0
+    outputDir: "."
+---
+
+```{r setup, cache=FALSE, message=FALSE, warning=FALSE}
+library(bcbioSingleCell)
+
+# Shared RMarkdown settings
+prepareSingleCellTemplate()
+if (file.exists("setup.R")) {
+    source("setup.R")
+}
+
+# Directory paths
+dataDir <- file.path(params$outputDir, "data")
+
+# Load bcbioSingleCell object
+bcbName <- load(params$bcbFile)
+bcb <- get(bcbName, inherits = FALSE)
+```
+
+```{r header, child="_header.Rmd"}
+```
+
+[bcbio][] run data was imported from **`r metadata(bcb)[["uploadDir"]]`**.
+
+
+
+# Count alignment
+
+We generated the counts using cellranger 2.0.1 on the HMS RC O2 cluster.
+
+
+
+# Quality control metrics {.tabset}
+
+## Cell counts
+
+```{r plotCellCounts}
+plotCellCounts(bcb, filterCells = FALSE)
+```
+
+
+## UMI counts per cell
+
+```{r plotUMIsPerCell, fig.height=12, fig.width=8}
+plotUMIsPerCell(
+    bcb,
+    filterCells = FALSE,
+    min = params$minUMIs)
+```
+
+
+## Genes detected per cell
+
+Here by "detected", we mean genes with a non-zero count measurement per cell. Seeing gene detection in the range of `1000`-`5000` is normal for [inDrop][] analysis.
+
+```{r plotGenesPerCell, fig.height=12, fig.width=8}
+plotGenesPerCell(
+    bcb,
+    filterCells = FALSE,
+    min = params$minGenes,
+    max = params$maxGenes)
+```
+
+
+## UMIs vs. genes detected
+
+If we graph out the total number of UMI counts per cell vs. the genes detected per cell, we can assess whether there is a large population of low quality cells with low counts and/or gene detection.
+
+```{r plotUMIsVsGenes}
+plotUMIsVsGenes(bcb, filterCells = FALSE)
+```
+
+
+## Mitochondrial counts ratio
+
+We evaluate overall mitochondrial gene expression as a biomarker of cellular stress during sample preparation.
+
+```{r plotMitoRatio, fig.height=16, fig.width=8}
+plotMitoRatio(
+    bcb,
+    filterCells = FALSE,
+    max = params$maxMitoRatio)
+```
+
+
+## Novelty
+
+Another way to QC the data is to look for less novelty, that is cells that have less genes detected per count than other cells. We can see the samples where we sequenced each cell less have a higher overall novelty, that is because we have not started saturated the sequencing for any given gene for these samples. Outlier cells in these samples might be cells that we have a less complex RNA species than other cells. Sometimes we can detect contamination with low complexity cell types like red blood cells via this metric.
+
+```{r plotNovelty, fig.height=12, fig.width=8}
+plotNovelty(
+    bcb,
+    filterCells = FALSE,
+    min = params$minNovelty)
+```
+
+
+
+# Filter cells
+
+```{r filterCells, fig.height=12, fig.width=8, results="asis"}
+bcb <- filterCells(
+    bcb,
+    minUMIs = params$minUMIs,
+    minGenes = params$minGenes,
+    maxGenes = params$maxGenes,
+    maxMitoRatio = params$maxMitoRatio,
+    minNovelty = params$minNovelty,
+    minCellsPerGene = params$minCellsPerGene)
+```
+
+```{r resave}
+assignAndSaveData(name = bcbName, object = bcb, dir = dataDir)
+```
+
+
+
+```{r footer, child="_footer.Rmd"}
+```
