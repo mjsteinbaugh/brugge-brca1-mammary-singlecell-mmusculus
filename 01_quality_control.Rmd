@@ -4,37 +4,44 @@ author: "`r getOption('author')`"
 date: "`r Sys.Date()`"
 bibliography: bibliography.bib
 params:
-    bcbFile: "data/bcb.rda"
-    minUMIs: 1000
-    minGenes: 500
-    maxGenes: 8000
-    maxMitoRatio: 0.1
-    minNovelty: 0.8
-    minCellsPerGene: 0
-    outputDir: "."
+    bcb_file: "data/2018-06-14/bcb.rda"
+    min_umis: 1000
+    max_umis: !r Inf
+    min_genes: 500
+    max_genes: 8000
+    max_mito_ratio: 0.1
+    min_novelty: 0.8
+    min_cells_per_gene: 10
+    data_dir: !r file.path("data", Sys.Date())
 ---
 
-```{r setup, cache=FALSE, message=FALSE, warning=FALSE}
-library(bcbioSingleCell)
+```{r setup, cache=FALSE, message=FALSE}
+# Last modified 2018-06-15
+bcbioSingleCell::prepareSingleCellTemplate()
+source("_setup.R")
 
-# Shared RMarkdown settings
-prepareSingleCellTemplate()
-if (file.exists("setup.R")) {
-    source("setup.R")
-}
+# Load SingleCellExperiment object
+bcb_name <- load(params$bcb_file)
+bcb <- get(bcb_name, inherits = FALSE)
+stopifnot(is(bcb, "SingleCellExperiment"))
+invisible(validObject(bcb))
 
-# Directory paths
-dataDir <- file.path(params$outputDir, "data")
-
-# Load bcbioSingleCell object
-bcbName <- load(params$bcbFile)
-bcb <- get(bcbName, inherits = FALSE)
+# Temporarily set to `sampleName`
+interesting_groups <- interestingGroups(bcb)
+interestingGroups(bcb) <- "sampleName"
 ```
 
 ```{r header, child="_header.Rmd"}
 ```
 
-[bcbio][] run data was imported from **`r metadata(bcb)[["uploadDir"]]`**.
+
+
+```{r sample_data}
+# getMethod("sampleData", "SingleCellExperiment")
+sampleData(bcb, return = "data.frame")
+```
+
+[cellranger][] data was imported from **`r metadata(bcb)[["uploadDir"]]`**.
 
 
 
@@ -46,20 +53,11 @@ We generated the counts using cellranger 2.0.1 on the HMS RC O2 cluster.
 
 # Quality control metrics {.tabset}
 
-## Cell counts
-
-```{r plotCellCounts}
-plotCellCounts(bcb, filterCells = FALSE)
-```
-
-
 ## UMI counts per cell
 
-```{r plotUMIsPerCell, fig.height=12, fig.width=8}
-plotUMIsPerCell(
-    bcb,
-    filterCells = FALSE,
-    min = params$minUMIs)
+```{r plot_umis_per_cell}
+# getMethod("plotUMIsPerCell", "SingleCellExperiment")
+plotUMIsPerCell(bcb, min = params$min_umis)
 ```
 
 
@@ -67,12 +65,9 @@ plotUMIsPerCell(
 
 Here by "detected", we mean genes with a non-zero count measurement per cell. Seeing gene detection in the range of `1000`-`5000` is normal for [inDrop][] analysis.
 
-```{r plotGenesPerCell, fig.height=12, fig.width=8}
-plotGenesPerCell(
-    bcb,
-    filterCells = FALSE,
-    min = params$minGenes,
-    max = params$maxGenes)
+```{r plot_genes_per_cell}
+# getMethod("plotGenesPerCell", "SingleCellExperiment")
+plotGenesPerCell(bcb, min = params$min_genes, max = params$max_genes)
 ```
 
 
@@ -80,8 +75,9 @@ plotGenesPerCell(
 
 If we graph out the total number of UMI counts per cell vs. the genes detected per cell, we can assess whether there is a large population of low quality cells with low counts and/or gene detection.
 
-```{r plotUMIsVsGenes}
-plotUMIsVsGenes(bcb, filterCells = FALSE)
+```{r plot_umis_vs_genes}
+# getMethod("plotUMIsVsGenes", "SingleCellExperiment")
+plotUMIsVsGenes(bcb)
 ```
 
 
@@ -89,11 +85,11 @@ plotUMIsVsGenes(bcb, filterCells = FALSE)
 
 We evaluate overall mitochondrial gene expression as a biomarker of cellular stress during sample preparation.
 
-```{r plotMitoRatio, fig.height=16, fig.width=8}
-plotMitoRatio(
-    bcb,
-    filterCells = FALSE,
-    max = params$maxMitoRatio)
+```{r plot_mito_ratio}
+# getMethod("plotMitoRatio", "SingleCellExperiment")
+plotMitoRatio(bcb, geom = "ecdf", max = params$max_mito_ratio)
+plotMitoRatio(bcb, geom = "violin", max = params$max_mito_ratio)
+plotMitoRatio(bcb, geom = "histogram", max = params$max_mito_ratio)
 ```
 
 
@@ -101,30 +97,47 @@ plotMitoRatio(
 
 Another way to QC the data is to look for less novelty, that is cells that have less genes detected per count than other cells. We can see the samples where we sequenced each cell less have a higher overall novelty, that is because we have not started saturated the sequencing for any given gene for these samples. Outlier cells in these samples might be cells that we have a less complex RNA species than other cells. Sometimes we can detect contamination with low complexity cell types like red blood cells via this metric.
 
-```{r plotNovelty, fig.height=12, fig.width=8}
-plotNovelty(
-    bcb,
-    filterCells = FALSE,
-    min = params$minNovelty)
+```{r plot_novelty}
+# getMethod("plotNovelty", "SingleCellExperiment")
+plotNovelty(bcb, min = params$min_novelty)
 ```
 
 
 
 # Filter cells
 
-```{r filterCells, fig.height=12, fig.width=8, results="asis"}
+```{r filter_cells}
+# getMethod("filterCells", "SingleCellExperiment")
 bcb <- filterCells(
-    bcb,
-    minUMIs = params$minUMIs,
-    minGenes = params$minGenes,
-    maxGenes = params$maxGenes,
-    maxMitoRatio = params$maxMitoRatio,
-    minNovelty = params$minNovelty,
-    minCellsPerGene = params$minCellsPerGene)
+    object = bcb,
+    minGenes = params$min_genes,
+    maxGenes = params$max_genes,
+    maxMitoRatio = params$max_mito_ratio,
+    minNovelty = params$min_novelty,
+    minCellsPerGene = params$min_cells_per_gene
+)
 ```
 
-```{r resave}
-assignAndSaveData(name = bcbName, object = bcb, dir = dataDir)
+
+
+```{r plot_filtered_qc, results="asis"}
+# getMethod("plotQC", "SingleCellExperiment")
+plotQC(
+    object = bcb,
+    return = "markdown",
+    headerLevel = 2
+)
+```
+
+
+
+```{r save}
+interestingGroups(bcb) <- interesting_groups
+assignAndSaveData(
+    name = paste(bcb_name, "filtered", sep = "_"),
+    object = bcb,
+    dir = params$data_dir
+)
 ```
 
 
