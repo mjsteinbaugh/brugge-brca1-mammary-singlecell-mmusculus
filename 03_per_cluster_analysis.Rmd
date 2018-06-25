@@ -4,18 +4,14 @@ author: "`r getOption('author')`"
 date: "`r Sys.Date()`"
 bibliography: bibliography.bib
 params:
-    seuratFile: "data/bcbFilteredSeurat.rda"
-    intgroup: "genotype"
+    seurat_file: "data/2018-06-18/seurat.rda"
+    interesting_groups: "genotype"
 ---
 
 ```{r setup, cache=FALSE, message=FALSE, warning=FALSE}
-library(Seurat)
-library(tidyverse)
-
-source("setup.R")
-
-seuratName <- load(params$seuratFile)
-seurat <- get(seuratName)
+source("_setup.R")
+seurat_name <- load(params$seurat_file)
+seurat <- get(seurat_name)
 ```
 
 ```{r header, child="_header.Rmd", eval=file.exists("_header.Rmd")}
@@ -48,21 +44,25 @@ mdHeader("cluster")
 TSNEPlot(
     seurat,
     do.label = TRUE,
-    label.size = 6)
+    group.by = "ident",
+    label.size = 6
+)
 
 mdHeader("sampleName")
 TSNEPlot(
     seurat,
     do.label = TRUE,
     group.by = "sampleName",
-    label.size = 6)
+    label.size = 6
+)
 
-mdHeader(params$intgroup)
+mdHeader(params$interesting_groups)
 TSNEPlot(
     seurat,
     do.label = TRUE,
-    group.by = params$intgroup,
-    label.size = 6)
+    group.by = params$interesting_groups,
+    label.size = 6
+)
 ```
 
 
@@ -72,7 +72,8 @@ TSNEPlot(
 Let's check the coloring of the clusters according to each principal component included in the analysis. Cluster specificity here can indicate that a specific PC is driving the structure for that individual cluster.
 
 ```{r pc_cluster_bias, fig.height=10, fig.width=10}
-pc <- seurat@calc.params %>%
+pc <- seurat %>%
+    .@calc.params %>%
     .[["RunTSNE"]] %>%
     .[["dims.use"]] %>%
     paste0("PC", .)
@@ -80,7 +81,8 @@ FeaturePlot(
     seurat,
     cols.use = c("purple", "darkgray"),
     features.plot = pc,
-    nCol = 3)
+    nCol = 3
+)
 ```
 
 
@@ -90,54 +92,65 @@ FeaturePlot(
 ```{r per_cluster, fig.height=12, fig.width=6, results="asis"}
 ident <- levels(seurat@ident)
 lapply(seq_along(ident), function(a) {
-    clusterID <- ident[[a]]
-    intgroup <- params$intgroup
-    title <- paste("cluster", clusterID)
+    cluster_id <- ident[[a]]
+    intgroup <- params$interesting_groups
+    title <- paste("cluster", cluster_id)
     writeLines(c(
         "", "",
         paste("##", title),
-        "", ""))
-    object <- SubsetData(seurat, ident.use = clusterID)
+        "", ""
+    ))
+    object <- SubsetData(seurat, ident.use = cluster_id)
     n <- ncol(object@data)
     
     # Plots
-    p1 <- TSNEPlot(object,
-                   do.return = TRUE,
-                   group.by = "sampleName") +
-        labs(title = tolower(title),
-             subtitle = paste("n =", n)) +
+    p1 <- TSNEPlot(
+        object,
+        do.return = TRUE,
+        group.by = "sampleName"
+    ) +
+        labs(
+            title = tolower(title),
+            subtitle = paste("n =", n)
+        ) +
         theme(legend.position = "bottom")
-    p2 <- TSNEPlot(object,
-                   do.return = TRUE,
-                   group.by = intgroup) +
+    p2 <- TSNEPlot(
+        object,
+        do.return = TRUE,
+        group.by = intgroup
+    ) +
         ggtitle(intgroup) +
         theme(legend.position = "bottom")
     plot_grid(p1, p2, labels = "auto", ncol = 1L, nrow = 2L) %>%
-        show
+        show()
     
     # Tables
     master <- object@meta.data %>%
-        as.data.frame %>%
+        as.data.frame() %>%
         .[, c("sampleName", intgroup)] %>%
-        rownames_to_column
-    sampleStats <- master %>%
+        rownames_to_column()
+    sample_stats <- master %>%
         arrange(.data[["sampleName"]]) %>%
         group_by(.data[["sampleName"]]) %>%
         summarize(count = n()) %>%
         mutate(pct = .data[["count"]] / sum(.data[["count"]]))
-    intgroupStats <- master %>%
+    intgroup_stats <- master %>%
         arrange(.data[[intgroup]]) %>%
         group_by(.data[[intgroup]]) %>%
         summarize(count = n()) %>%
         mutate(pct = .data[["count"]] / sum(.data[["count"]]))
-    kable(sampleStats,
-          caption = paste0(title, ": sampleName"),
-          digits = 2L) %>%
-        show
-    kable(intgroupStats,
-          caption = paste0(title, ": ", intgroup),
-          digits = 2L) %>%
-        show
+    kable(
+        sample_stats,
+        caption = paste0(title, ": sampleName"),
+        digits = 2L
+    ) %>%
+        show()
+    kable(
+        intgroup_stats,
+        caption = paste0(title, ": ", intgroup),
+        digits = 2L
+    ) %>%
+        show()
 }) %>%
     invisible
 ```
