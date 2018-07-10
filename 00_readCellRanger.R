@@ -5,6 +5,7 @@ bcb <- readCellRanger(
     format = "mtx",
     filtered = FALSE,
     sampleMetadataFile = "meta/sample_metadata.xlsx",
+    organism = "Mus musculus",
     refdataDir = "refdata-cellranger-mm10-1.2.0",
     interestingGroups = "genotype"
 )

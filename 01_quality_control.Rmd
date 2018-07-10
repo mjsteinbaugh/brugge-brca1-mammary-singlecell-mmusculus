@@ -4,7 +4,7 @@ author: "`r getOption('author')`"
 date: "`r Sys.Date()`"
 bibliography: bibliography.bib
 params:
-    bcb_file: "data/2018-06-29/bcb.rda"
+    bcb_file: "data/2018-07-09/bcb.rda"
     min_umis: 1000
     max_umis: !r Inf
     min_genes: 500
@@ -17,7 +17,7 @@ params:
 ---
 
 ```{r setup, cache=FALSE, message=FALSE}
-# Last modified 2018-06-29
+# Last modified 2018-07-09
 bcbioSingleCell::prepareSingleCellTemplate()
 source("_setup.R")
 
@@ -334,7 +334,7 @@ assignAndSaveData(
 
 ## Counts matrix
 
-```{r counts}
+```{r counts, eval=FALSE}
 counts <- counts(bcb)
 saveData(counts, dir = params$data_dir)
 
