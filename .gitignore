@@ -2,6 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-cell_gene_matrix
-cellranger
-
+cell_gene_matrix/
+cellranger/

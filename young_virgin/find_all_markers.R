@@ -1,0 +1,5 @@
+library(basejump)
+library(Seurat)
+loadData(seurat, dir = "data/2018-07-09")
+all_markers <- FindAllMarkers(seurat)
+saveData(all_markers, dir = file.path("data", Sys.Date()))
