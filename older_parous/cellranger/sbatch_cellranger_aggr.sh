@@ -17,7 +17,7 @@
 module load cellranger/2.1.1
 
 cellranger aggr \
-  --id=older_parous \
+  --id=aggr \
   --csv=aggr.csv \
   --normalize=mapped \
   --localcores=$SLURM_CPUS_PER_TASK \
