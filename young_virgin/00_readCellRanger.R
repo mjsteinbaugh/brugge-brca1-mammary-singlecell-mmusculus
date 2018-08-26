@@ -1,7 +1,7 @@
 # v0.1.17
 library(bcbioSingleCell)
 bcb <- readCellRanger(
-    uploadDir = "cellranger",
+    uploadDir = "cellranger/aggr",
     format = "mtx",
     filtered = FALSE,
     sampleMetadataFile = "meta/sample_metadata.xlsx",

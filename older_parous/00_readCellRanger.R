@@ -2,7 +2,7 @@
 # This release is required to load raw counts from Cell Ranger
 library(bcbioSingleCell)
 bcb <- readCellRanger(
-    uploadDir = "cellranger",
+    uploadDir = "cellranger/aggr",
     format = "mtx",
     filtered = FALSE,
     organism = "Mus musculus",

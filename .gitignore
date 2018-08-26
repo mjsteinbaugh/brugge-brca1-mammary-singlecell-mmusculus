@@ -2,5 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+archive/
 cell_gene_matrix/
 cellranger/
+data/
+data-raw/
+*.html
